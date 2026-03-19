@@ -78,3 +78,8 @@ GET  /api/v1/audit/logs                # 审计查询
 ## 详细需求文档
 
 完整需求规格说明书见 [SRS.md](./SRS.md)
+
+## 项目进度
+
+- 强制： 完成新的模块必须更新项目进度
+- 完整的项目进度见 [PROJECT_PROGRESS.md](./PROJECT_PROGRESS.md)

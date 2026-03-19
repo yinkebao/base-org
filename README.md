@@ -6,7 +6,7 @@
 - `A2` 注册页（实时校验 + 密码强度 + 自动登录）
 - `B` 系统仪表盘（hash 子路由 + 指标/任务/告警）
 
-项目总进度见：[项目进度.md](/Users/yinkebao/project/my/base-org/项目进度.md)
+项目总进度见：[PROJECT_PROGRESS.md](/Users/yinkebao/project/my/base-org/PROJECT_PROGRESS.md)
 
 ## 目录结构
 
