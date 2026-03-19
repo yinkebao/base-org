@@ -1,0 +1,20 @@
+.auth-page--login .auth-card__header h1 {
+  font-size: 44px;
+}
+
+.auth-page--login .auth-form {
+  gap: 24px;
+}
+
+.auth-page--login .btn--secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.auth-page--login .btn--secondary span {
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+}
