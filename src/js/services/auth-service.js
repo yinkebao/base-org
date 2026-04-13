@@ -28,9 +28,10 @@ export const AuthService = {
     if (isMockMode()) {
       return MockApi.checkUsername(payload);
     }
-    return request(API_ENDPOINTS.auth.checkUsername, {
-      method: "POST",
-      data: payload
+    // 后端接口为 GET，username 作为 query 参数
+    const username = encodeURIComponent(payload?.username || "");
+    return request(`${API_ENDPOINTS.auth.checkUsername}?username=${username}`, {
+      method: "GET"
     });
   },
 
