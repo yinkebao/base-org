@@ -34,7 +34,6 @@ logging:
     root: INFO
     com.baseorg.docassistant: DEBUG
     org.hibernate.SQL: DEBUG
-    io.modelcontextprotocol.client.LifecycleInitializer: ERROR
 
 # JWT 配置
 jwt:
@@ -88,7 +87,7 @@ app:
           display-name: 联网搜索
           description: 通过 MCP 搜索公开互联网信息
           server-name: tavily
-          remote-tool-name: tavily_search
+          remote-tool-name: tavily-search
           priority: 30
           keywords: [ "联网搜索", "官网", "最新", "版本", "发布说明" ]
         - tool-id: mermaid-diagram
@@ -121,13 +120,11 @@ app:
         - oracle.com
         - docs.oracle.com
         - developer.mozilla.org
-  mcp:
-    servers:
-      tavily:
-        enabled: ${APP_QA_MCP_TAVILY_ENABLED:true}
-        base-url: ${APP_QA_MCP_TAVILY_BASE_URL:https://mcp.tavily.com/mcp/}
-        auth-mode: ${APP_QA_MCP_TAVILY_AUTH_MODE:query}
-        api-key: ${TAVILY_API_KEY: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}
-        api-key-query-param: ${APP_QA_MCP_TAVILY_API_KEY_QUERY_PARAM:tavilyApiKey}
-        request-timeout-seconds: ${APP_QA_MCP_TAVILY_REQUEST_TIMEOUT_SECONDS:15}
-        expected-tool-names: [ tavily_search, tavily_extract ]
+    mcp:
+      servers:
+        tavily:
+          enabled: ${APP_QA_MCP_TAVILY_ENABLED:true}
+          base-url: ${APP_QA_MCP_TAVILY_BASE_URL:https://mcp.tavily.com/mcp/}
+          auth-mode: ${APP_QA_MCP_TAVILY_AUTH_MODE:bearer}
+          api-key: ${TAVILY_API_KEY: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}
+          request-timeout-seconds: ${APP_QA_MCP_TAVILY_REQUEST_TIMEOUT_SECONDS:15}
