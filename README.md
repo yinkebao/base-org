@@ -22,30 +22,31 @@
 
 ```text
 .
-├── login.html            # 登录页
-├── register.html         # 注册页
-├── dashboard.html        # 系统仪表盘
-├── src
-│   ├── css
-│   │   ├── base.css
-│   │   ├── components.css
-│   │   └── pages/
-│   ├── js
-│   │   ├── config/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   └── utils/
-│   └── assets/icons/
-├── tests
-│   ├── unit/
-│   └── e2e/
-├── backend/              # Spring Boot 后端
+├── frontend/              # 前端项目
+│   ├── index.html         # 入口（重定向到登录页）
+│   ├── login.html         # 登录页
+│   ├── register.html      # 注册页
+│   ├── dashboard.html     # 系统仪表盘
+│   ├── src
+│   │   ├── css/
+│   │   ├── js/
+│   │   │   ├── config/
+│   │   │   ├── pages/
+│   │   │   ├── services/
+│   │   │   └── utils/
+│   │   └── assets/icons/
+│   ├── tests/
+│   │   ├── unit/
+│   │   └── e2e/
+│   ├── package.json
+│   └── vite.config.js
+├── backend/               # Spring Boot 后端
 │   └── src/main/
 │       ├── java/com/baseorg/docassistant/
 │       └── resources/
 │           ├── application.yml
 │           └── application-dev.yml
-└── docs/                 # 架构与集成文档
+└── docs/                  # 架构与集成文档
     ├── API_CONTRACT.md
     ├── PRD.md
     ├── backend/
@@ -68,9 +69,10 @@
 
 ### 环境配置
 
-复制 `.env.example` 为 `.env`：
+在 `frontend/` 目录下复制 `.env.example` 为 `.env`：
 
 ```bash
+cd frontend
 cp .env.example .env
 ```
 
@@ -85,6 +87,7 @@ cp .env.example .env
 ### 启动前端
 
 ```bash
+cd frontend
 npm install
 npm run dev
 ```
@@ -141,6 +144,8 @@ export OPENAI_EMBEDDING_MODEL='text-embedding-3-small'
 ## 构建与测试
 
 ```bash
+cd frontend
+
 # 代码检查
 npm run lint
 
@@ -154,6 +159,7 @@ npm run build
 Playwright E2E 测试（系统权限受限时）：
 
 ```bash
+cd frontend
 PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers npx playwright install chromium
 PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers npm run test:e2e
 ```
