@@ -110,6 +110,35 @@ zsh -ic 'mvn39 -f backend/pom.xml spring-boot:run'
 
 后端默认监听 `localhost:8080`，连接本地 PostgreSQL 数据库 `doc_assistant`（用户名/密码：`postgres/postgres`）。
 
+### Docker 部署
+
+#### 分别部署
+- 前端：
+docker build -t base-rog/frontend ./frontend
+
+- 后端：
+docker build -t base-rog/backend ./backend
+
+```bash
+# 构建并启动所有服务（前端 + 后端 + PostgreSQL）
+docker compose up -d --build
+
+# 查看日志
+docker compose logs -f
+
+# 停止
+docker compose down
+```
+
+服务说明：
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| frontend | 80 | Nginx 托管前端静态资源，代理 API 请求到后端 |
+| backend | 8080 | Spring Boot 后端 |
+| db | 5432 | PostgreSQL + pgvector |
+
+可通过 `.env` 文件覆盖配置（JWT_SECRET、OPENAI_API_KEY 等）。
+
 ---
 
 ## AI 模型配置

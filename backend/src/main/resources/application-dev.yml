@@ -37,7 +37,7 @@ logging:
 
 # JWT 配置
 jwt:
-  secret: ${JWT_SECRET:f5g4h3j2k1l0dmn2b12nvjkmfmmefcds}
+  secret: ${JWT_SECRET:a3f8c2e1d4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a4f5e6d7c8b9a0f1}
   expiration: 86400000  # 24小时
 
 # 应用配置

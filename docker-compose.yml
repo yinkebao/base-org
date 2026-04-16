@@ -1,0 +1,58 @@
+# docker-compose.yml — 一键启动前后端 + PostgreSQL
+#
+# 使用方式：
+#   docker compose up -d          # 启动所有服务
+#   docker compose up --build     # 重新构建并启动
+#   docker compose logs -f        # 查看日志
+#   docker compose down           # 停止并删除容器
+
+services:
+  # ---------- PostgreSQL 数据库 ----------
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: doc_assistant
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------- 后端 ----------
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/doc_assistant
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      APP_AI_CHAT_PROVIDER: ${APP_AI_CHAT_PROVIDER:-OPENAI_COMPATIBLE}
+      APP_AI_EMBEDDING_PROVIDER: ${APP_AI_EMBEDDING_PROVIDER:-OLLAMA}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com}
+      OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-3.5-turbo}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ---------- 前端 ----------
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
