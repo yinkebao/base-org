@@ -49,12 +49,20 @@ spec:
                 secretKeyRef:
                   name: backend-secret
                   key: OPENAI_API_KEY
+            - name: OPENAI_BASE_URL
+              value: "https://api.hanbbq.top"
+            - name: OPENAI_CHAT_MODEL
+              value: "gpt-5.4"
+            - name: OPENAI_EMBEDDING_MODEL
+              value: "text-embedding-3-small"
             - name: APP_AI_CHAT_PROVIDER
               value: "OPENAI_COMPATIBLE"
             - name: APP_AI_EMBEDDING_PROVIDER
               value: "OLLAMA"
             - name: OLLAMA_BASE_URL
               value: "http://host.docker.internal:11434"
+            - name: OLLAMA_EMBEDDING_MODEL
+              value: "bge-m3"
           readinessProbe:
             httpGet:
               path: /api/v1/admin/health
