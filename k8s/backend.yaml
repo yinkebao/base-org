@@ -1,3 +1,14 @@
+# ============================================================
+# base-org backend 部署（k3s on 阿里云）
+# ------------------------------------------------------------
+# 前置条件：
+#   1. 阿里云节点已装 k3s，内网 IP = 172.26.245.136
+#   2. 私有镜像仓库 http://172.26.245.136:5000 已启用 htpasswd
+#      在 /etc/rancher/k3s/registries.yaml 写入凭证后 systemctl restart k3s
+#   3. Postgres (pgvector) 监听宿主机 0.0.0.0:5432
+#   4. ⚠️ 本文件中的 Secret 是示例值。真正的 JWT_SECRET / OPENAI_API_KEY
+#      生产环境请用 kubectl create secret 注入，不要提交到 git
+# ============================================================
 apiVersion: v1
 kind: Secret
 metadata:
@@ -6,29 +17,61 @@ metadata:
 type: Opaque
 stringData:
   DB_PASSWORD: "postgres"
-  JWT_SECRET: "change-me-in-production"
+  # JWT_SECRET 必须 >= 32 字符。生产请用以下命令生成后替换：
+  #   openssl rand -base64 48
+  JWT_SECRET: "REPLACE-WITH-openssl-rand-base64-48-MIN-32-CHARS"
   OPENAI_API_KEY: ""
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: base-org
+data:
+  OPENAI_BASE_URL: "https://api.hanbbq.top"
+  OPENAI_CHAT_MODEL: "gpt-5.4"
+  OPENAI_EMBEDDING_MODEL: "text-embedding-3-small"
+  APP_AI_CHAT_PROVIDER: "OPENAI_COMPATIBLE"
+  # embedding 走宿主机 Ollama（hostAliases 已把 host.docker.internal 映射到 172.26.245.136）
+  APP_AI_EMBEDDING_PROVIDER: "OLLAMA"
+  OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+  OLLAMA_EMBEDDING_MODEL: "bge-m3"
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
   namespace: base-org
+  labels:
+    app: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: backend
     spec:
+      # 让 Pod 里保留 host.docker.internal 的用法，指向 k3s 宿主机内网 IP
+      # 访问宿主机上的 Postgres / 其他自部署服务
+      hostAliases:
+        - ip: "172.26.245.136"
+          hostnames:
+            - "host.docker.internal"
       containers:
         - name: backend
-          image: kind-registry:5000/base-rog/backend:latest
+          image: 172.26.245.136:5000/base-org/backend:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
+              name: http
           env:
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://host.docker.internal:5432/doc_assistant"
@@ -49,26 +92,30 @@ spec:
                 secretKeyRef:
                   name: backend-secret
                   key: OPENAI_API_KEY
-            - name: OPENAI_BASE_URL
-              value: "https://api.hanbbq.top"
-            - name: OPENAI_CHAT_MODEL
-              value: "gpt-5.4"
-            - name: OPENAI_EMBEDDING_MODEL
-              value: "text-embedding-3-small"
-            - name: APP_AI_CHAT_PROVIDER
-              value: "OPENAI_COMPATIBLE"
-            - name: APP_AI_EMBEDDING_PROVIDER
-              value: "OLLAMA"
-            - name: OLLAMA_BASE_URL
-              value: "http://host.docker.internal:11434"
-            - name: OLLAMA_EMBEDDING_MODEL
-              value: "bge-m3"
+          envFrom:
+            - configMapRef:
+                name: backend-config
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1536Mi"
           readinessProbe:
             httpGet:
               path: /api/v1/admin/health
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/v1/admin/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service
@@ -81,3 +128,4 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
+      name: http
