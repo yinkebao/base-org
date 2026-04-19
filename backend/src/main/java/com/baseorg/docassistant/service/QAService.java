@@ -36,7 +36,6 @@ import com.baseorg.docassistant.service.rag.LLMService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -81,8 +80,12 @@ public class QAService {
 
     /**
      * 同步执行一次问答请求，并返回完整问答结果。
+     * <p>
+     * 本方法不再声明 {@code @Transactional}：整个 pipeline 会跨越外部 HTTP（联网搜索、MCP、LLM 流式）
+     * 与多次 DB 操作，包一层大事务会让数据库连接长时间被外部 IO 占用。实际事务边界已下沉到
+     * {@link ConversationService} 与 {@link QAAuditService} 的各具体写方法内，
+     * 每次 DB 写入立即提交，外部调用失败时通过 {@code failAssistantMessage} 将占位消息标记为失败。
      */
-    @Transactional
     public QAResponse ask(QARequest request, Long userId) {
         QASession session = conversationService.ensureSession(userId, request.getSessionId());
         PipelineResult result = executePipeline(userId, session.getId(), request.getQuestion(), request.getTopK(), request.getScoreThreshold(), request.isWebSearchEnabled());
@@ -529,14 +532,20 @@ public class QAService {
                 .orElse(WebSearchSummaryMode.NARRATIVE_SUMMARY);
     }
 
+    /**
+     * 统一拼接 prompt 上下文：工具证据 + 历史/检索 + 图表说明。
+     * <p>
+     * 历史对话与知识库检索片段由 {@link ContextAssembler} 组装，工具证据由
+     * {@link EvidenceAssembler} 组装，各司其职，避免同一批 reranked 结果在 prompt 中出现两次。
+     */
     private String buildCombinedContext(List<QAMessage> recentMessages,
                                         List<SearchResult.ResultItem> reranked,
                                         List<ToolEvidence> toolEvidences,
                                         List<DiagramPayload> diagrams) {
         String retrievalContext = reranked == null || reranked.isEmpty()
                 ? ""
-                : contextAssembler.assemble(recentMessages, reranked);
-        String evidenceContext = evidenceAssembler.assembleCombinedContext(toolEvidences, reranked);
+                : nullToEmpty(contextAssembler.assemble(recentMessages, reranked));
+        String toolContext = nullToEmpty(evidenceAssembler.assembleToolContext(toolEvidences));
         String diagramContext = diagrams == null || diagrams.isEmpty()
                 ? ""
                 : "已生成图表：\n" + diagrams.stream()
@@ -545,8 +554,8 @@ public class QAService {
                 .orElse("");
 
         StringBuilder sb = new StringBuilder();
-        if (!evidenceContext.isBlank()) {
-            sb.append(evidenceContext).append("\n");
+        if (!toolContext.isBlank()) {
+            sb.append(toolContext).append("\n");
         }
         if (!retrievalContext.isBlank()) {
             sb.append(retrievalContext).append("\n");
@@ -555,6 +564,10 @@ public class QAService {
             sb.append(diagramContext);
         }
         return sb.toString().trim();
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private PipelineResult handleSmallTalk(Long userId,

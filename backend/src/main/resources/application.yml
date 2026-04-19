@@ -90,6 +90,13 @@ app:
     min-size: 100       # 最小块大小（token）
     tokenizer-encoding: cl100k_base
   qa:
+    tool-executor:
+      core-pool-size: ${APP_QA_TOOL_EXECUTOR_CORE_POOL_SIZE:4}
+      max-pool-size: ${APP_QA_TOOL_EXECUTOR_MAX_POOL_SIZE:8}
+      queue-capacity: ${APP_QA_TOOL_EXECUTOR_QUEUE_CAPACITY:50}
+      keep-alive-seconds: ${APP_QA_TOOL_EXECUTOR_KEEP_ALIVE_SECONDS:60}
+      thread-name-prefix: qa-tool-
+      await-termination-seconds: 10
     tools:
       planner-llm-enabled: ${APP_QA_TOOLS_PLANNER_LLM_ENABLED:true}
       max-steps: ${APP_QA_TOOLS_MAX_STEPS:3}

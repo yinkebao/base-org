@@ -1,6 +1,5 @@
 package com.baseorg.docassistant.service.qa.tool;
 
-import com.baseorg.docassistant.dto.qa.SearchResult;
 import com.baseorg.docassistant.dto.qa.tool.ToolEvidence;
 import com.baseorg.docassistant.dto.qa.tool.WebSearchSummaryMode;
 import org.springframework.stereotype.Service;
@@ -12,7 +11,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 统一组装工具证据与检索证据。
+ * 工具证据组装。
+ * <p>
+ * 本组件<b>只</b>负责把 {@link ToolEvidence} 结构化为 prompt 可直接使用的文本片段，
+ * 并按外部 / 内部来源分类排序。<br>
+ * 历史对话与知识库检索上下文由 {@link com.baseorg.docassistant.service.qa.ContextAssembler} 单独组装，
+ * 以避免同一批检索结果在 prompt 中出现两次。
  */
 @Service
 public class EvidenceAssembler {
@@ -68,35 +72,6 @@ public class EvidenceAssembler {
             }
         }
         return sb.toString().trim();
-    }
-
-    public String assembleRetrievalContext(List<SearchResult.ResultItem> items) {
-        if (items == null || items.isEmpty()) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder("知识库证据：\n");
-        for (int i = 0; i < Math.min(items.size(), 4); i++) {
-            SearchResult.ResultItem item = items.get(i);
-            sb.append(i + 1)
-                    .append(". [")
-                    .append(item.getDocTitle())
-                    .append("] ")
-                    .append(item.getContent())
-                    .append("\n");
-        }
-        return sb.toString();
-    }
-
-    public String assembleCombinedContext(List<ToolEvidence> evidences, List<SearchResult.ResultItem> items) {
-        String toolContext = assembleToolContext(evidences);
-        String retrievalContext = assembleRetrievalContext(items);
-        if (toolContext.isBlank()) {
-            return retrievalContext;
-        }
-        if (retrievalContext.isBlank()) {
-            return toolContext;
-        }
-        return toolContext + "\n" + retrievalContext;
     }
 
     private List<ToolEvidence> sortExternalSearchEvidences(List<ToolEvidence> evidences) {
