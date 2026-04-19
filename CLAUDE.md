@@ -2,23 +2,78 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+Tradeoff: These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+1. Think Before Coding
+Don't assume. Don't hide confusion. Surface tradeoffs.
+
+Before implementing:
+
+State your assumptions explicitly. If uncertain, ask.
+If multiple interpretations exist, present them - don't pick silently.
+If a simpler approach exists, say so. Push back when warranted.
+If something is unclear, stop. Name what's confusing. Ask.
+2. Simplicity First
+Minimum code that solves the problem. Nothing speculative.
+
+No features beyond what was asked.
+No abstractions for single-use code.
+No "flexibility" or "configurability" that wasn't requested.
+No error handling for impossible scenarios.
+If you write 200 lines and it could be 50, rewrite it.
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+3. Surgical Changes
+Touch only what you must. Clean up only your own mess.
+
+When editing existing code:
+
+Don't "improve" adjacent code, comments, or formatting.
+Don't refactor things that aren't broken.
+Match existing style, even if you'd do it differently.
+If you notice unrelated dead code, mention it - don't delete it.
+When your changes create orphans:
+
+Remove imports/variables/functions that YOUR changes made unused.
+Don't remove pre-existing dead code unless asked.
+The test: Every changed line should trace directly to the user's request.
+
+4. Goal-Driven Execution
+Define success criteria. Loop until verified.
+
+Transform tasks into verifiable goals:
+
+"Add validation" → "Write tests for invalid inputs, then make them pass"
+"Fix the bug" → "Write a test that reproduces it, then make it pass"
+"Refactor X" → "Ensure tests pass before and after"
+For multi-step tasks, state a brief plan:
+
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+These guidelines are working if: fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
 ## 项目概述
 
-**技术文档 & 需求文档助手** — 基于企业 RAG 能力与 Spring 生态构建的文档辅助系统。
+**技术文档助手** — 基于企业 RAG 能力与 Spring 生态构建的文档检索、导入与编辑系统。
 
 核心能力：
 - 企业知识检索（RAG）
-- 文档生成/补全
-- 需求模板化生成
-- 变更审批与审计工作流
+- 文档导入与向量化
+- 文档管理与内联编辑
+- 模板管理与审计
 
 ## 技术栈
 
 | 层级 | 技术选型 |
 |------|---------|
 | 应用框架 | Spring Boot |
-| LLM 集成 | Spring AI |
-| 向量存储 | PostgreSQL + pgvector（或 Milvus） |
+| LLM 集成 | Spring AI Alibaba + OpenAI-compatible provider |
+| 向量存储 | PostgreSQL + pgvector |
 | 对象存储 | S3 兼容存储 |
 | 监控 | Prometheus + Grafana |
 | Secrets | HashiCorp Vault / 云 KMS |
@@ -28,9 +83,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      API Gateway                        │
-│              (Spring Boot + Spring AI)                  │
+│ (Spring Boot + Spring AI Alibaba + OpenAI-compatible)  │
 ├─────────────────────────────────────────────────────────┤
-│  文档导入  │  检索问答  │  草稿生成  │  审批工作流      │
+│  文档导入  │  检索问答  │  文档管理  │  审计与监控      │
 ├─────────────────────────────────────────────────────────┤
 │  向量存储 (pgvector/Milvus)  │  对象存储 (S3)          │
 └─────────────────────────────────────────────────────────┘
@@ -38,22 +93,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 核心数据模型
 
-- **Document**: `doc_id, title, source_url, author, dept, version, sensitivity`
+- **Document**: `doc_id, title, source_url, owner_id, dept, version, sensitivity`
 - **Chunk**: `chunk_id, doc_id, chunk_index, text, embedding, tokens, metadata`
-- **Draft**: `draft_id, template_id, owner_id, content, status, versions[]`
+- **ImportTask**: `task_id, owner_id, filename, status, progress, result_doc_id`
 - **AuditLog**: `audit_id, user_id, action, resource_type, resource_id, timestamp`
+- **Template**: `template_id, name, category, content, variables, version`
 
 ## API 端点
 
 ```
-POST /api/v1/documents/import          # 文档导入（异步）
-GET  /api/v1/documents/import/{taskId} # 查询导入状态
-POST /api/v1/qa                        # 问答检索
-POST /api/v1/generate/requirement      # 生成需求草稿
-GET  /api/v1/drafts/{id}               # 获取草稿
-POST /api/v1/drafts/{id}/submit        # 提交审批
-POST /api/v1/admin/templates           # 模板管理
-GET  /api/v1/audit/logs                # 审计查询
+POST /api/v1/auth/login               # 登录
+POST /api/v1/auth/register            # 注册
+GET  /api/v1/auth/check-username      # 用户名检查
+GET  /api/v1/auth/sso/start           # SSO 登录入口
+POST /api/v1/documents/import         # 文档导入
+GET  /api/v1/documents/import/{taskId}# 查询导入状态
+GET  /api/v1/documents                # 文档列表
+GET  /api/v1/documents/tree           # 文档树
+GET  /api/v1/documents/{id}           # 文档详情
+PUT  /api/v1/documents/{id}           # 更新文档
+POST /api/v1/qa                       # 问答检索
+GET  /api/v1/admin/metrics            # 系统指标
+GET  /api/v1/admin/alerts             # 告警列表
+GET  /api/v1/admin/health             # 健康检查
 ```
 
 ## 安全与合规要点
@@ -78,3 +140,8 @@ GET  /api/v1/audit/logs                # 审计查询
 ## 详细需求文档
 
 完整需求规格说明书见 [SRS.md](./SRS.md)
+
+## 项目进度
+
+- 强制：完成新的模块必须更新项目进度
+- 完整的项目进度见 [PROJECT_PROGRESS.md](./PROJECT_PROGRESS.md)

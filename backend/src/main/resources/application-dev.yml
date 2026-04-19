@@ -1,0 +1,130 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/doc_assistant
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:sk-1f5b9eb384a82d586f47d470820e6511}
+      base-url: ${OPENAI_BASE_URL:https://api.hanbbq.top}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:gpt-5.4}
+          temperature: 0.7
+      embedding:
+        options:
+          model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      embedding:
+        options:
+          model: ${OLLAMA_EMBEDDING_MODEL:bge-m3}
+
+logging:
+  level:
+    root: INFO
+    com.baseorg.docassistant: DEBUG
+    org.hibernate.SQL: DEBUG
+
+# JWT 配置
+jwt:
+  secret: ${JWT_SECRET:a3f8c2e1d4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a4f5e6d7c8b9a0f1}
+  expiration: 86400000  # 24小时
+
+# 应用配置
+app:
+  ai:
+    provider: ${APP_AI_PROVIDER:OPENAI_COMPATIBLE}
+    chat:
+      provider: ${APP_AI_CHAT_PROVIDER:OPENAI_COMPATIBLE}
+    embedding:
+      provider: ${APP_AI_EMBEDDING_PROVIDER:OLLAMA}
+    degraded-fallback-enabled: ${APP_AI_DEGRADED_FALLBACK_ENABLED:true}
+    log-startup-status: ${APP_AI_LOG_STARTUP_STATUS:true}
+  storage:
+    local:
+      path: ${user.home}/docassist/storage
+  chunk:
+    max-size: 1000      # 最大块大小（token）
+    overlap-size: 200   # 块重叠大小（token）
+    min-size: 100       # 最小块大小（token）
+    tokenizer-encoding: cl100k_base
+  qa:
+    tools:
+      planner-llm-enabled: ${APP_QA_TOOLS_PLANNER_LLM_ENABLED:true}
+      max-steps: ${APP_QA_TOOLS_MAX_STEPS:3}
+      catalog:
+        - tool-id: feishu-mcp
+          type: MCP_READ
+          provider-type: MCP
+          display-name: 飞书 MCP
+          description: 读取飞书流程、文档、审批等企业上下文
+          server-name: feishu
+          remote-tool-name: search_context
+          priority: 10
+          keywords: [ "飞书", "审批", "流程", "文档", "群" ]
+        - tool-id: lanhu-mcp
+          type: MCP_READ
+          provider-type: MCP
+          display-name: 蓝湖 MCP
+          description: 读取蓝湖设计稿、页面说明与交互信息
+          server-name: lanhu
+          remote-tool-name: search_design
+          priority: 20
+          keywords: [ "蓝湖", "设计", "页面", "交互", "原型" ]
+        - tool-id: web-search
+          type: WEB_SEARCH
+          provider-type: MCP
+          display-name: 联网搜索
+          description: 通过 MCP 搜索公开互联网信息
+          server-name: tavily
+          remote-tool-name: tavily-search
+          priority: 30
+          keywords: [ "联网搜索", "官网", "最新", "版本", "发布说明" ]
+        - tool-id: mermaid-diagram
+          type: MERMAID_DIAGRAM
+          provider-type: LOCAL
+          display-name: Mermaid 图表生成
+          description: 生成流程图或时序图
+          priority: 90
+          keywords: [ "流程图", "时序图", "mermaid" ]
+    web-search:
+      enabled: ${APP_QA_WEB_SEARCH_ENABLED:true}
+      low-confidence-threshold: ${APP_QA_WEB_SEARCH_LOW_CONFIDENCE_THRESHOLD:0.72}
+      top-score-threshold: ${APP_QA_WEB_SEARCH_TOP_SCORE_THRESHOLD:0.82}
+      min-reliable-sources: ${APP_QA_WEB_SEARCH_MIN_RELIABLE_SOURCES:2}
+      max-query-variants: ${APP_QA_WEB_SEARCH_MAX_QUERY_VARIANTS:3}
+      max-search-results: ${APP_QA_WEB_SEARCH_MAX_SEARCH_RESULTS:5}
+      max-fetch-pages: ${APP_QA_WEB_SEARCH_MAX_FETCH_PAGES:3}
+      connect-timeout-ms: ${APP_QA_WEB_SEARCH_CONNECT_TIMEOUT_MS:3000}
+      read-timeout-ms: ${APP_QA_WEB_SEARCH_READ_TIMEOUT_MS:5000}
+      max-snippet-length: ${APP_QA_WEB_SEARCH_MAX_SNIPPET_LENGTH:240}
+      max-page-content-length: ${APP_QA_WEB_SEARCH_MAX_PAGE_CONTENT_LENGTH:1800}
+      max-total-evidence-length: ${APP_QA_WEB_SEARCH_MAX_TOTAL_EVIDENCE_LENGTH:4800}
+      allowed-domains:
+        - openai.com
+        - platform.openai.com
+        - github.com
+        - docs.github.com
+        - spring.io
+        - docs.spring.io
+        - oracle.com
+        - docs.oracle.com
+        - developer.mozilla.org
+    mcp:
+      servers:
+        tavily:
+          enabled: ${APP_QA_MCP_TAVILY_ENABLED:true}
+          base-url: ${APP_QA_MCP_TAVILY_BASE_URL:https://mcp.tavily.com/mcp/}
+          auth-mode: ${APP_QA_MCP_TAVILY_AUTH_MODE:bearer}
+          api-key: ${TAVILY_API_KEY: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}
+          request-timeout-seconds: ${APP_QA_MCP_TAVILY_REQUEST_TIMEOUT_SECONDS:15}
