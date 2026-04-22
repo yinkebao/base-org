@@ -466,27 +466,27 @@ export function renderQAPage(state) {
 
           <div class="qa-input-area">
             <div class="qa-input-box">
-            
-              // <div class="qa-input-toolbar">
-              //   <div class="qa-input-toolbar__actions">
-              //     <button
-              //       type="button"
-              //       class="qa-input-tool-btn ${state.webSearchMenuOpen ? "is-open" : ""}"
-              //       data-action="toggle-search-menu"
-              //       aria-label="打开增强工具"
-              //     >+</button>
-              //     ${state.webSearchEnabled ? '<span class="qa-input-tool-indicator" title="联网搜索已开启">🌐</span>' : ""}
-              //     ${state.webSearchMenuOpen ? `
-              //       <div class="qa-input-tool-menu">
-              //         <button
-              //           type="button"
-              //           class="qa-input-tool-option ${state.webSearchEnabled ? "is-active" : ""}"
-              //           data-action="toggle-web-search"
-              //         >联网搜索</button>
-              //       </div>
-              //     ` : ""}
-              //   </div>
-              // </div>
+
+         <!-- <div class="qa-input-toolbar">
+                <div class="qa-input-toolbar__actions">
+                  <button
+                    type="button"
+                    class="qa-input-tool-btn ${state.webSearchMenuOpen ? "is-open" : ""}"
+                    data-action="toggle-search-menu"
+                    aria-label="打开增强工具"
+                  >+</button>
+                  ${state.webSearchEnabled ? '<span class="qa-input-tool-indicator" title="联网搜索已开启">🌐</span>' : ""}
+                  ${state.webSearchMenuOpen ? `
+                    <div class="qa-input-tool-menu">
+                      <button
+                        type="button"
+                        class="qa-input-tool-option ${state.webSearchEnabled ? "is-active" : ""}"
+                        data-action="toggle-web-search"
+                      >联网搜索</button>
+                    </div>
+                  ` : ""}
+                </div>
+              </div> -->
               <textarea
                 id="qaInput"
                 placeholder="输入您的问题，按 Enter 发送..."
