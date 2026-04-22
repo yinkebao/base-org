@@ -65,9 +65,11 @@ spec:
         - ip: "172.26.245.136"
           hostnames:
             - "host.docker.internal"
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: backend
-          image: 172.26.245.136:5000/base-org/backend:latest
+          image: ghcr.io/yinkebao/base-org/backend:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

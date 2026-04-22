@@ -20,9 +20,11 @@ spec:
       labels:
         app: frontend
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: frontend
-          image: 172.26.245.136:5000/base-org/frontend:latest
+          image: ghcr.io/yinkebao/base-org/frontend:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80

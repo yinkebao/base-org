@@ -1,0 +1,105 @@
+name: Deploy to K8s
+
+on:
+  workflow_run:
+    workflows: ["Docker Build & Push"]
+    branches: [master]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: '要部署的镜像 tag（如 sha-abcdef1 或 latest）'
+        required: true
+        default: 'latest'
+
+concurrency:
+  group: deploy-k8s-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    # workflow_run 触发时，必须判断上游成功；手动触发则直接跑
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: 计算镜像 tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.image_tag }}"
+          else
+            SHA_SHORT=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
+            TAG="sha-${SHA_SHORT}"
+          fi
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Using image tag: ${TAG}"
+
+      - name: 配置 SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ALIYUN_SSH_KEY }}
+
+      - name: 信任阿里云主机 key
+        env:
+          HOST: ${{ secrets.ALIYUN_SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+      - name: 执行部署到 K8s
+        env:
+          SSH_USER: ${{ secrets.ALIYUN_SSH_USER || 'root' }}
+          SSH_HOST: ${{ secrets.ALIYUN_SSH_HOST }}
+          NS: base-org
+          TAG: ${{ steps.tag.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          IMAGE_BACKEND="ghcr.io/${REPO}/backend:${TAG}"
+          IMAGE_FRONTEND="ghcr.io/${REPO}/frontend:${TAG}"
+
+          echo "▶ Backend  -> $IMAGE_BACKEND"
+          echo "▶ Frontend -> $IMAGE_FRONTEND"
+
+          ssh "$SSH_USER@$SSH_HOST" bash <<EOF
+            set -euo pipefail
+
+            echo "🔄 更新 backend 镜像"
+            kubectl -n $NS set image deployment/backend backend=$IMAGE_BACKEND
+
+            echo "🔄 更新 frontend 镜像"
+            kubectl -n $NS set image deployment/frontend frontend=$IMAGE_FRONTEND
+
+            echo "⏳ 等待 backend rollout"
+            kubectl -n $NS rollout status deployment/backend --timeout=5m
+
+            echo "⏳ 等待 frontend rollout"
+            kubectl -n $NS rollout status deployment/frontend --timeout=5m
+
+            echo "✅ 部署完成"
+            kubectl -n $NS get pods -o wide
+          EOF
+
+      - name: 写入 Summary
+        if: always()
+        run: |
+          echo "## 🚀 K8s 部署结果" >> $GITHUB_STEP_SUMMARY
+          echo "- Namespace: \`base-org\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tag: \`${{ steps.tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Job status: **${{ job.status }}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "回滚命令（在阿里云服务器执行）：" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "kubectl -n base-org rollout undo deployment/backend" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl -n base-org rollout undo deployment/frontend" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
