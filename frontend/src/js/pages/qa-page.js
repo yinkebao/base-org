@@ -466,6 +466,7 @@ export function renderQAPage(state) {
 
           <div class="qa-input-area">
             <div class="qa-input-box">
+            
               // <div class="qa-input-toolbar">
               //   <div class="qa-input-toolbar__actions">
               //     <button
